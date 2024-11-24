@@ -4,7 +4,8 @@
 function handler(event) {
     var request = event.request;
     var originalImagePath = request.uri;
-    //  validate, process and normalize the requested operations in query parameters
+    
+    // Validate, process, and normalize the requested operations in query parameters
     var normalizedOperations = {};
     if (request.querystring) {
         Object.keys(request.querystring).forEach(operation => {
@@ -30,7 +31,7 @@ function handler(event) {
                     if (request.querystring[operation]['value']) {
                         var width = parseInt(request.querystring[operation]['value']);
                         if (!isNaN(width) && (width > 0)) {
-                            // you can protect the Lambda function by setting a max value, e.g. if (width > 4000) width = 4000;
+                            if (width > 500) width = 500;
                             normalizedOperations['width'] = width.toString();
                         }
                     }
@@ -39,7 +40,7 @@ function handler(event) {
                     if (request.querystring[operation]['value']) {
                         var height = parseInt(request.querystring[operation]['value']);
                         if (!isNaN(height) && (height > 0)) {
-                            // you can protect the Lambda function by setting a max value, e.g. if (height > 4000) height = 4000;
+                            if (height > 500) height = 500;
                             normalizedOperations['height'] = height.toString();
                         }
                     }
@@ -48,7 +49,7 @@ function handler(event) {
                     if (request.querystring[operation]['value']) {
                         var quality = parseInt(request.querystring[operation]['value']);
                         if (!isNaN(quality) && (quality > 0)) {
-                            if (quality > 100) quality = 100;
+                            if (quality > 100) quality = 65;
                             normalizedOperations['quality'] = quality.toString();
                         }
                     }
@@ -56,25 +57,26 @@ function handler(event) {
                 default: break;
             }
         });
-        //rewrite the path to normalized version if valid operations are found
+
+        // Rewrite the path to the normalized version if valid operations are found
         if (Object.keys(normalizedOperations).length > 0) {
-            // put them in order
             var normalizedOperationsArray = [];
             if (normalizedOperations.format) normalizedOperationsArray.push('format='+normalizedOperations.format);
             if (normalizedOperations.quality) normalizedOperationsArray.push('quality='+normalizedOperations.quality);
             if (normalizedOperations.width) normalizedOperationsArray.push('width='+normalizedOperations.width);
             if (normalizedOperations.height) normalizedOperationsArray.push('height='+normalizedOperations.height);
-            request.uri = originalImagePath + '/' + normalizedOperationsArray.join(',');     
+            request.uri = originalImagePath + '?' + normalizedOperationsArray.join('&');     
         } else {
-            // If no valid operation is found, flag the request with /original path suffix
-            request.uri = originalImagePath + '/original';     
+            // If no valid operation is found
+            request.uri = originalImagePath + '?width=250&height=250&quality=65';     
         }
 
     } else {
-        // If no query strings are found, flag the request with /original path suffix
-        request.uri = originalImagePath + '/original'; 
+        // If no query strings are found
+        request.uri = originalImagePath + '?width=350' 
     }
-    // remove query strings
-    request['querystring'] = {};
+    
+    // Remove query strings
+    request.querystring = {};
     return request;
 }
