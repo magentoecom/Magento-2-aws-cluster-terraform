@@ -106,50 +106,6 @@ resource "aws_lb_listener_rule" "internalfrontend" {
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
-# Create conditional listener rule for Internal Load Balancer - forward to admin
-# # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener_rule" "internaladmin" {
-  listener_arn = aws_lb_listener.internal.arn
-  priority     = 20
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this["admin"].arn
-  }
-  condition {
-    http_header {
-      http_header_name = "X-Magenx-Header"
-      values           = [random_uuid.this.result]
-    }
-  }
-  condition {
-    path_pattern {
-      values = ["/admin_${random_string.this["admin_path"].result}/*"]
-    }
-  }
-}
-# # ---------------------------------------------------------------------------------------------------------------------#
-# Create conditional listener rule for Internal Load Balancer - forward to phpmyadmin
-# # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener_rule" "internalmysql" {
-  listener_arn = aws_lb_listener.internal.arn
-  priority     = 10
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this["admin"].arn
-  }
-  condition {
-    http_header {
-      http_header_name = "X-Magenx-Header"
-      values           = [random_uuid.this.result]
-    }
-  }
-  condition {
-    path_pattern {
-      values = ["/mysql_${random_string.this["mysql_path"].result}/*"]
-    }
-  }
-}
-# # ---------------------------------------------------------------------------------------------------------------------#
 # Create CloudWatch HTTP 5XX metrics and email alerts
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_cloudwatch_metric_alarm" "httpcode_target_5xx_count" {
