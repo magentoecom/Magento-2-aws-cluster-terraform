@@ -10,20 +10,43 @@ resource "aws_launch_template" "this" {
   for_each = var.ec2
   name = "${local.project}-${each.key}-ltpl"
   iam_instance_profile { name = aws_iam_instance_profile.ec2[each.key].name }
-  image_id = element(values(data.external.packer[each.key].result), 0)
-  instance_type = each.value
+  image_id = data.aws_ami.distro.id
+  instance_type = each.value.instance_type
   monitoring { enabled = var.asg["monitoring"] }
   network_interfaces { 
     associate_public_ip_address = true
-    security_groups = [aws_security_group.ec2.id]
+    security_groups = [aws_security_group.ec2[each.key].id]
   }
-  dynamic "tag_specifications" {
-    for_each = toset(["instance","volume"])
-    content {
-       resource_type = tag_specifications.key
-       tags = merge(data.aws_default_tags.this.tags,{ Name = "${local.project}-${each.key}-ec2" })
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = each.value.volume_size
+      volume_type = "gp3"
+      encrypted   = true
+      delete_on_termination = true
     }
   }
+  tag_specifications {
+       resource_type = "instance"
+       tags = merge(
+         local.default_tags,
+         {
+          Name = "${local.project}-${each.key}-ec2"
+          Instance_name = each.key
+          Hostname = "${each.key}.${var.brand}.internal"
+        }
+      )
+    }
+  tag_specifications {
+       resource_type = "volume"
+       tags = merge(
+         local.default_tags,
+         {
+          Name = "${local.project}-${each.key}-volume"
+          Instance_name = each.key
+        }
+      )
+    }
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
@@ -44,21 +67,13 @@ resource "aws_launch_template" "this" {
 resource "aws_autoscaling_group" "this" {
   for_each = var.ec2
   name = "${local.project}-${each.key}-asg"
-  vpc_zone_identifier = values(aws_subnet.this).*.id
+  vpc_zone_identifier = [for az, subnet in aws_subnet.this : subnet.id][0:2]
   desired_capacity    = var.asg["desired_capacity"]
   min_size            = var.asg["min_size"]
   max_size            = var.asg["max_size"]
   health_check_grace_period = var.asg["health_check_grace_period"]
   health_check_type         = var.asg["health_check_type"]
-  target_group_arns  = [aws_lb_target_group.this[each.key].arn]
-  dynamic "warm_pool" {
-    for_each = var.asg["warm_pool"] == "enabled" ? [var.ec2] : []
-    content {
-      pool_state                  = "Stopped"
-      min_size                    = var.asg["min_size"]
-      max_group_prepared_capacity = var.asg["max_size"]
-    }
-  }
+  target_group_arns  = each.key == "varnish" ? [aws_lb_target_group.this.arn] : []
   launch_template {
     name    = aws_launch_template.this[each.key].name
     version = "$Latest"
@@ -75,7 +90,7 @@ resource "aws_autoscaling_group" "this" {
     create_before_destroy = true
   }
   dynamic "tag" {
-    for_each = merge(data.aws_default_tags.this.tags,{Name="${local.project}-${each.key}-asg"})
+    for_each = merge(local.default_tags,{Name="${local.project}-${each.key}-asg"})
     content {
       key                 = tag.key
       value               = tag.value
