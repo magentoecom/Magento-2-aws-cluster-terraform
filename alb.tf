@@ -7,13 +7,12 @@
 # Create Application Load Balancers
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_lb" "this" {
-  for_each           = toset(var.alb["type"])
   name               = "${local.project}-${each.key}-alb"
-  internal           = (each.key == "internal" ? true : false)
+  internal           = false
   load_balancer_type = "application"
   drop_invalid_header_fields = true
-  security_groups    = [(each.key == "internal" ? aws_security_group.internal_alb.id : aws_security_group.external_alb.id)]
-  subnets            = values(aws_subnet.this).*.id
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = [for az, subnet in aws_subnet.this : subnet.id][0:2]
   access_logs {
     bucket  = aws_s3_bucket.this["system"].bucket
     prefix  = "ALB"
@@ -27,53 +26,29 @@ resource "aws_lb" "this" {
 # Create Target Groups for Load Balancers
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_lb_target_group" "this" {
-  for_each    = var.ec2
-  name        = "${local.project}-${each.key}"
+  name        = "${local.project}-varnish"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.this.id
   health_check {
-    path = "/${random_string.this["health_check"].result}"
+    path                = "/${random_string.this["health_check"].result}"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+    matcher             = "200"
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
-# Create https:// listener for External Load Balancer - forward to varnish
+# Create https:// listener for Load Balancer - default
 # # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener" "externalhttps" {
+resource "aws_lb_listener" "https" {
   depends_on = [aws_acm_certificate_validation.default]
-  load_balancer_arn = aws_lb.this["external"].arn
+  load_balancer_arn = aws_lb.this.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-FS-1-2-Res-2020-10"
   certificate_arn   = aws_acm_certificate.default.arn
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this["varnish"].arn
-  }
-}
-# # ---------------------------------------------------------------------------------------------------------------------#
-# Create http:// listener for External Load Balancer - redirect to https://
-# # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener" "externalhttp" {
-  load_balancer_arn = aws_lb.this["external"].arn
-  port              = "80"
-  protocol          = "HTTP"
-  default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
-# # ---------------------------------------------------------------------------------------------------------------------#
-# Create default listener for Internal Load Balancer - default response
-# # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener" "internal" {
-  load_balancer_arn = aws_lb.this["internal"].arn
-  port              = "80"
-  protocol          = "HTTP"
   default_action {
     type             = "fixed-response"
     fixed_response {
@@ -84,24 +59,34 @@ resource "aws_lb_listener" "internal" {
     }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
-# Create conditional listener rule for Internal Load Balancer - forward to frontend
+# Create conditional listener rule for Load Balancer - forward to varnish
 # # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_lb_listener_rule" "internalfrontend" {
-  listener_arn = aws_lb_listener.internal.arn
+resource "aws_lb_listener_rule" "varnish" {
+  listener_arn = aws_lb_listener.https.arn
   priority     = 30
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.this["frontend"].arn
+    target_group_arn = aws_lb_target_group.this.arn
   }
   condition {
     host_header {
-      values = [var.app["domain"]]
+      values = [var.domain]
     }
   }
-  condition {
-    http_header {
-      http_header_name = "X-Magenx-Header"
-      values           = [random_uuid.this.result]
+}
+# # ---------------------------------------------------------------------------------------------------------------------#
+# Create http:// listener for Load Balancer - redirect to https://
+# # ---------------------------------------------------------------------------------------------------------------------#
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
     }
   }
 }
@@ -122,8 +107,8 @@ resource "aws_cloudwatch_metric_alarm" "httpcode_target_5xx_count" {
   ok_actions          = ["${aws_sns_topic.default.arn}"]
   
   dimensions = {
-    TargetGroup  = aws_lb_target_group.this["frontend"].arn
-    LoadBalancer = aws_lb.this["internal"].arn
+    TargetGroup  = aws_lb_target_group.this.arn
+    LoadBalancer = aws_lb.this.arn
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
@@ -143,7 +128,7 @@ resource "aws_cloudwatch_metric_alarm" "httpcode_elb_5xx_count" {
   ok_actions          = ["${aws_sns_topic.default.arn}"]
   
   dimensions = {
-    LoadBalancer = aws_lb.this["external"].arn
+    LoadBalancer = aws_lb.this.arn
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
@@ -163,7 +148,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_rps" {
   ok_actions          = ["${aws_sns_topic.default.arn}"]
 
   dimensions = {
-    LoadBalancer = aws_lb.this["external"].arn
+    LoadBalancer = aws_lb.this.arn
   }
 }
 
