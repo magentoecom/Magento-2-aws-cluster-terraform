@@ -71,11 +71,21 @@ variable "vpc" {
 }
 
 variable "ec2" {
-  description  = "EC2 instances names and types included in AutoScaling groups"
-  default      = {
-    varnish    = "m7g.large"
-    frontend   = "c7g.xlarge"
-   }
+  default = {
+    frontend = {
+      instance_type    = "c7g.xlarge"
+      volume_size      = "25"
+      desired_capacity = "2"
+      min_size         = "2"
+      max_size         = "8"
+    }
+    varnish = {
+      instance_type    = "c7g.large"
+      volume_size      = "25"
+      desired_capacity = "2"
+      min_size         = "2"
+      max_size         = "8"
+    }
 }
 
 variable "opensearch" {
@@ -235,12 +245,6 @@ variable "redis_parameters" {
 variable "asg" {
   description      = "Map Autoscaling Group configuration values"
   default  = {
-    volume_size           = "50"
-    monitoring            = false
-    warm_pool             = "disabled"
-    desired_capacity      = "1"
-    min_size              = "1"
-    max_size              = "5"
     health_check_type     = "EC2"
     health_check_grace_period = "300"
   }
@@ -260,23 +264,28 @@ variable "asp" {
 variable "s3" {
   description = "S3 bucket names"
   type        = set(string)
-  default     = ["media", "media-optimized", "system", "backup", "state"]
+  default     = ["media", "media-optimized", "system", "backup"]
 }
 
 variable "alb" {
   description = "Application Load Balancer configuration values"
   default     = {
-    type               = ["internal","external"]
     rps_threshold      = "5000"
     error_threshold    = "25"
     }
 }
 
+# Variable for EFS paths, UIDs, GIDs, and permissions
 variable "efs" {
-  description = "Create shared folders in EFS"
-  default     = {
-    path      = ["var","media"]
-    }
+  type = map(object({
+    uid         = number
+    gid         = number
+    permissions = string
+  }))
+  default = {
+    var    = { uid = 1001, gid = 1002, permissions = "2770" }
+    media  = { uid = 1001, gid = 1002, permissions = "2770" }
+  }
 }
 
 variable "ec2_instance_profile_policy" {
