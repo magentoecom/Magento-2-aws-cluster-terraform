@@ -1,9 +1,42 @@
+variable "github_repo" {
+  description = "Magento GitHub repository"
+  type        = string
+}
 
+variable "brand" {
+  description = "Business brand name"
+  type        = string
+}
+
+variable "domain" {
+  description = "Shop domain name"
+  type        = string
+}
+
+variable "admin_email" {
+  description = "Shop admin email"
+  type        = string
+}
 
 locals {
    # Create global project name to be assigned to all resources
-   project = lower("${var.app["brand"]}-${random_string.this["project"].result}")
+   project = lower("${var.brand}-${random_string.this["project"].result}")
    environment = lower(terraform.workspace)
+}
+
+locals {
+  default_tags = {
+    Managed      = "terraform"
+    Brand        = var.brand
+    Environment  = local.environment
+    Dns          = "${var.brand}.internal"
+  }
+}
+
+locals {
+  ec2_setup = {
+    Setup = "s3_system_setup"
+  }
 }
 
 variable "password" {
@@ -11,8 +44,6 @@ variable "password" {
    default     = [
       "rds",
       "rabbitmq",
-      "app",
-      "blowfish",
       "redis",
       "opensearch"
    ]
@@ -21,15 +52,22 @@ variable "password" {
 variable "string" {
    description = "Generate random string"
    default     = [
-      "admin_path", 
-      "mysql_path", 
-      "profiler", 
-      "session_persistent", 
-      "cache_prefix", 
-      "health_check", 
+      "admin_path",
+      "mysql_path",
+      "health_check",
       "project",
       "opensearch"
    ]
+}
+
+variable "vpc" {
+  description      = "Configuration for VPC"
+  default          = {
+    enable_dns_support   = true
+    enable_dns_hostnames = true
+    instance_tenancy     = "default"
+    cidr_block           = "172.35.0.0/16"
+  }
 }
 
 variable "ec2" {
@@ -37,35 +75,7 @@ variable "ec2" {
   default      = {
     varnish    = "m7g.large"
     frontend   = "c7g.xlarge"
-    admin      = "c7g.xlarge"
    }
-}
-
-variable "app" {
-  description      = "Map application params | Magento 2"
-  default          = {
-    install          = "enabled"
-    source_repo      = "magenx/Magento-2"
-    app_version      = "2"
-    cidr_block       = "172.30.0.0/16"
-    brand            = "magenx"
-    domain           = "magenx.org"
-    admin_email      = "admin@magenx.org"
-    admin_login      = "admin"
-    admin_firstname  = "Hereis"
-    admin_lastname   = "Myname"
-    source           = "https://github.com/magenx/Magento-2.git"
-    language         = "en_US"
-    currency         = "EUR"
-    timezone         = "UTC"
-    php_version      = "8.3"
-    php_packages     = "cli fpm common mysql zip gd mbstring curl xml bcmath intl soap oauth apcu"
-    linux_packages   = "nfs-common unzip git patch python3-pip acl attr imagemagick snmp binutils pkg-config libssl-dev"
-    exclude_linux_packages = "apache2* *apcu-bc"
-    volume_size      = "50"
-    composer_user    = "8c681734f22763b50ea0c29dff9e7af2"
-    composer_pass    = "02dfee497e669b5db1fe1c8d481d6974"
-  }
 }
 
 variable "opensearch" {
