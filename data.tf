@@ -81,48 +81,30 @@ data "aws_security_group" "default" {
 data "aws_cloudfront_origin_request_policy" "media" {
   name = "Managed-CORS-S3Origin"
 }
-data "aws_cloudfront_origin_request_policy" "static" {
+data "aws_cloudfront_origin_request_policy" "alb" {
   name = "Managed-CORS-CustomOrigin"
+}
+data "aws_cloudfront_origin_request_policy" "admin" {
+  name = "Managed-AllViewer"
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
 # Get the ID of CloudFront cache policy.
 # # ---------------------------------------------------------------------------------------------------------------------#
-data "aws_cloudfront_cache_policy" "media" {
-  name = "Managed-CachingOptimized"
+data "aws_cloudfront_cache_policy" "alb" {
+  name = "UseOriginCacheControlHeaders-QueryStrings"
 }
-data "aws_cloudfront_cache_policy" "static" {
-  name = "UseOriginCacheControlHeaders"
+data "aws_cloudfront_cache_policy" "admin" {
+  name = "Managed-CachingDisabled"
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
 # Get get the latest ID of a registered AMI linux distro by owner and version
 # # ---------------------------------------------------------------------------------------------------------------------#
 data "aws_ami" "distro" {
   most_recent = true
-  #owners      = ["099720109477"] # ubuntu
   owners      = ["136693071363"] # debian
 
   filter {
     name   = "name"
     values = ["debian-12-arm64*"] # debian
-  }
-}
-# # ---------------------------------------------------------------------------------------------------------------------#
-# Get AMI image_id generated from manifest with external data script
-# # ---------------------------------------------------------------------------------------------------------------------#
-data "external" "packer" {
-   depends_on = [null_resource.packer]
-   for_each = var.ec2
-   program = ["/bin/bash", "${abspath(path.root)}/packer/ami_id.sh"] 
-   query = {
-    INSTANCE_NAME = each.key
-  }
- }
-# # ---------------------------------------------------------------------------------------------------------------------#
-#  Get IP address where Packer Builder is running to add to EC2 security group to allow ssh access
-# # ---------------------------------------------------------------------------------------------------------------------#
-data "http" "packer" {
-  url = "https://ifconfig.co/json"
-  request_headers = {
-    Accept = "application/json"
   }
 }
