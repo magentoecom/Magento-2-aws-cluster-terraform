@@ -12,7 +12,7 @@ resource "aws_launch_template" "this" {
   iam_instance_profile { name = aws_iam_instance_profile.ec2[each.key].name }
   image_id = data.aws_ami.distro.id
   instance_type = each.value.instance_type
-  monitoring { enabled = var.asg["monitoring"] }
+  monitoring { enabled = true }
   network_interfaces { 
     associate_public_ip_address = true
     security_groups = [aws_security_group.ec2[each.key].id]
@@ -68,9 +68,9 @@ resource "aws_autoscaling_group" "this" {
   for_each = var.ec2
   name = "${local.project}-${each.key}-asg"
   vpc_zone_identifier = [for az, subnet in aws_subnet.this : subnet.id][0:2]
-  desired_capacity    = var.asg["desired_capacity"]
-  min_size            = var.asg["min_size"]
-  max_size            = var.asg["max_size"]
+  desired_capacity    = each.value.desired_capacity
+  min_size            = each.value.min_size
+  max_size            = each.value.max_size
   health_check_grace_period = var.asg["health_check_grace_period"]
   health_check_type         = var.asg["health_check_type"]
   target_group_arns  = each.key == "varnish" ? [aws_lb_target_group.this.arn] : []
