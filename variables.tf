@@ -292,10 +292,10 @@ variable "ec2_instance_profile_policy" {
   description = "Policy attach to EC2 Instance Profile"
   type        = set(string)
   default     = [
+  "arn:aws:iam::aws:policy/AWSCloudMapRegisterInstanceAccess",
   "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
   "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
   "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientReadWriteAccess",
-  "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy"
   ]
 }
 
@@ -306,37 +306,6 @@ variable "eventbridge_policy" {
   "arn:aws:iam::aws:policy/service-role/CloudWatchEventsBuiltInTargetExecutionAccess", 
   "arn:aws:iam::aws:policy/service-role/CloudWatchEventsInvocationAccess",
   "arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole"
-  ]
-}
-
-variable "aws_config_rule" {
-  description = "Use AWS Config to evaluate critical configuration settings for your AWS resources."
-  default     = {
-  ROOT_ACCOUNT_MFA_ENABLED                  = ""
-  MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS        = ""
-  EC2_STOPPED_INSTANCE                      = ""
-  INCOMING_SSH_DISABLED                     = "AWS::EC2::SecurityGroup"
-  DB_INSTANCE_BACKUP_ENABLED                = "AWS::RDS::DBInstance"
-  RDS_SNAPSHOTS_PUBLIC_PROHIBITED           = "AWS::RDS::DBSnapshot"
-  RDS_INSTANCE_DELETION_PROTECTION_ENABLED  = "AWS::RDS::DBInstance"
-  EC2_IMDSV2_CHECK                          = "AWS::EC2::Instance"
-  EC2_VOLUME_INUSE_CHECK                    = "AWS::EC2::Volume"
-  ELB_DELETION_PROTECTION_ENABLED           = "AWS::ElasticLoadBalancingV2::LoadBalancer"
-  }
-}
-
-# Define the variable for resource types
-variable "resource_types" {
-  type = list(string)
-  default = [
-    "AWS::EC2::Instance",
-    "AWS::S3::Bucket",
-    "AWS::IAM::Role",
-    "AWS::IAM::User",
-    "AWS::RDS::DBInstance",
-    "AWS::EC2::VPC",
-    "AWS::EC2::Subnet",
-    "AWS::EC2::SecurityGroup"
   ]
 }
 
