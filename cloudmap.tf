@@ -16,8 +16,11 @@ resource "aws_service_discovery_private_dns_namespace" "this" {
 }
 
 resource "aws_service_discovery_service" "this" {
-  for_each = var.ec2
-  name     = each.key
+  for_each = {
+      for service in setproduct(keys(var.ec2), slice(keys(data.aws_availability_zone.all), 0, 2)) :
+        "${service[0]}-${service[1]}" => service 
+  }
+  name = ${local.project}-${each.key}
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.this.id
     dns_records {
