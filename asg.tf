@@ -88,7 +88,7 @@ EOF
 resource "aws_autoscaling_group" "this" {
   for_each = var.ec2
   name = "${local.project}-${each.key}-asg"
-  vpc_zone_identifier = [for az, subnet in aws_subnet.this : subnet.id][0:2]
+  vpc_zone_identifier = slice(keys(data.aws_availability_zone.all), 0, 2)
   desired_capacity    = each.value.desired_capacity
   min_size            = each.value.min_size
   max_size            = each.value.max_size
