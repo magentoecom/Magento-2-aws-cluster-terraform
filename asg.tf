@@ -12,11 +12,6 @@ resource "aws_launch_template" "this" {
   iam_instance_profile { name = aws_iam_instance_profile.ec2[each.key].name }
   image_id = data.aws_ami.distro.id
   instance_type = each.value.instance_type
-  monitoring { enabled = true }
-  network_interfaces { 
-    associate_public_ip_address = true
-    security_groups = [aws_security_group.ec2[each.key].id]
-  }
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
@@ -26,33 +21,29 @@ resource "aws_launch_template" "this" {
       delete_on_termination = true
     }
   }
+  monitoring { enabled = true }
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups = [aws_security_group.ec2[each.key].id]
+  }
   tag_specifications {
        resource_type = "instance"
-       tags = merge(
-         local.default_tags,
-         {
+       tags = {
           Name = "${local.project}-${each.key}-ec2"
           Instance_name = each.key
           Hostname = "${each.key}.${var.brand}.internal"
         }
-      )
     }
   tag_specifications {
        resource_type = "volume"
-       tags = merge(
-         local.default_tags,
-         {
+       tags = {
           Name = "${local.project}-${each.key}-volume"
-          Instance_name = each.key
         }
-      )
     }
   user_data = base64encode(<<EOF
 #!/bin/bash
-# update and install
-apt -qq update
+# remove awscli and install ssm manager
 apt -qqy remove --purge awscli
-apt -qqy install unzip
 # install ssm manager
 mkdir /tmp/ssm
 cd /tmp/ssm
@@ -60,12 +51,6 @@ wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_arm64
 dpkg -i amazon-ssm-agent.deb
 systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
-# install aws cli v2
-mkdir /tmp/awscli
-cd /tmp/awscli
-curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-bash ./aws/install
 EOF
   )
   metadata_options {
@@ -127,14 +112,12 @@ for_each = aws_autoscaling_group.this
 group_names = [
     aws_autoscaling_group.this[each.key].name
   ]
-
   notifications = [
     "autoscaling:EC2_INSTANCE_LAUNCH",
     "autoscaling:EC2_INSTANCE_TERMINATE",
     "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
     "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
   ]
-
   topic_arn = aws_sns_topic.default.arn
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
@@ -197,5 +180,43 @@ resource "aws_cloudwatch_metric_alarm" "scalein" {
   alarm_description = "${each.key} scale-in alarm - CPU less than ${var.asp["in_threshold"]} percent"
   alarm_actions     = [aws_autoscaling_policy.scalein[each.key].arn]
 }
-
-
+# # ---------------------------------------------------------------------------------------------------------------------#
+# Create CloudWatch alarm for disk_used_percent metric
+# # ---------------------------------------------------------------------------------------------------------------------#
+resource "aws_cloudwatch_metric_alarm" "disk_free_alarm" {
+  for_each            = var.ec2
+  alarm_name          = "${local.project}-${each.key}-disk-free-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "used_percent"
+  namespace           = "${local.project}"
+  period              = 120
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Triggered when disk used percent exceeds 80%"
+  actions_enabled     = true
+  dimensions = { AutoScalingGroupName = aws_autoscaling_group.this[each.key].name }
+  alarm_actions = [aws_sns_topic.default.arn]
+  ok_actions = [aws_sns_topic.default.arn]
+  insufficient_data_actions = [aws_sns_topic.default.arn]
+}
+# # ---------------------------------------------------------------------------------------------------------------------#
+# Create CloudWatch alarm for asg max active instances
+# # ---------------------------------------------------------------------------------------------------------------------#
+resource "aws_cloudwatch_metric_alarm" "asg_max_instances" {
+  for_each            = var.ec2
+  alarm_name          = "${local.project}-${each.key}-asg-max-instances"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "GroupInServiceInstances"
+  namespace           = "${local.project}"
+  period              = 60
+  statistic           = "Maximum"
+  threshold           = each.value.max_size
+  alarm_description   = "Triggered when ASG ${each.key} reaches ${each.value.max_size} instance count"
+  actions_enabled     = true
+  dimensions = { AutoScalingGroupName = aws_autoscaling_group.this[each.key].name }
+  alarm_actions = [aws_sns_topic.default.arn]
+  ok_actions = [aws_sns_topic.default.arn]
+  insufficient_data_actions = [aws_sns_topic.default.arn]
+}
