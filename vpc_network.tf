@@ -7,25 +7,25 @@
 # Create our dedicated VPC
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_vpc" "this" {
-  cidr_block           = var.app["cidr_block"]
-  instance_tenancy     = "default"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+  cidr_block           = var.vpc["cidr_block"]
+  instance_tenancy     = var.vpc["instance_tenancy"]
+  enable_dns_support   = var.vpc["enable_dns_support"]
+  enable_dns_hostnames = var.vpc["enable_dns_hostnames"]
   tags = {
-    Name = "${var.app["brand"]}-vpc"
+    Name = "${local.project}-vpc"
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
 # Create subnets for each AZ in our dedicated VPC
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_subnet" "this" {
-  for_each                = data.aws_availability_zone.all
+  for_each                = data.aws_availability_zone.available
   vpc_id                  = aws_vpc.this.id
   availability_zone       = each.key
   cidr_block              = cidrsubnet(aws_vpc.this.cidr_block, 4, var.az_number[each.value.name_suffix])
   map_public_ip_on_launch = true
   tags = {
-    Name = "${local.project}-subnet"
+    Name = "${local.project}-subnet-${each.key}"
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
