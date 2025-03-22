@@ -13,6 +13,7 @@ resource "aws_ssm_document" "cloudmap_deregister" {
   content = <<EOF
 schemaVersion: '0.3'
 description: Deregister instance from CloudMap on termination
+assumeRole: ${aws_iam_role.ssm_service_role.arn}
 parameters:
   InstanceId:
     type: String
@@ -22,56 +23,55 @@ parameters:
     description: The name of the Auto Scaling Group
   Project:
     type: String
-    default: ${local.project}
     description: The project name
-  Environment:
-    type: String
-    default: ${local.environment}
-    description: The environment
+    default: ${local.project}
 mainSteps:
   - name: ConstructParameterPath
     action: aws:executeScript
     nextStep: GetCloudMapServiceId
-    isEnd: false
     inputs:
       Runtime: python3.11
       Handler: construct_parameter_path
       InputPayload:
         AutoScalingGroupName: '{{ AutoScalingGroupName }}'
         Project: '{{ Project }}'
-        Environment: '{{ Environment }}'
       Script: |-
         def construct_parameter_path(event, context):
             print("Received event:", event)
             asg_name = event['AutoScalingGroupName']
             project = event['Project']
-            environment = event['Environment']
             service_group = asg_name.split('-')[2]
-            parameter_path = f"/{project}/{environment}/{service_group.upper()}_CLOUDMAP_SERVICE_ID"
+            parameter_path = f"/{project}/{service_group.upper()}_CLOUDMAP_SERVICE_ID"
             return {"ParameterPath": parameter_path}
     outputs:
       - Name: ParameterPath
         Selector: $.Payload.ParameterPath
         Type: String
-  - name: GetCloudMapServiceId
+  - name: "GetCloudMapServiceId"
     action: aws:executeAwsApi
     nextStep: DeregisterInstanceFromCloudMap
-    isEnd: false
     inputs:
       Service: ssm
       Api: GetParameter
-      Name: '{{ ConstructParameterPath.ParameterPath }}'
+      Name: "{{ ConstructParameterPath.ParameterPath }}"
     outputs:
       - Name: CloudMapServiceId
         Selector: $.Parameter.Value
         Type: String
-  - name: DeregisterInstanceFromCloudMap
+  - name: "DeregisterInstanceFromCloudMap"
     action: aws:executeAwsApi
-    isEnd: true
     inputs:
       Service: servicediscovery
       Api: DeregisterInstance
-      ServiceId: '{{ GetCloudMapServiceId.CloudMapServiceId }}'
-      InstanceId: '{{ InstanceId }}'
+      ServiceId: "{{ GetCloudMapServiceId.CloudMapServiceId }}"
+      InstanceId: "{{ InstanceId }}"
+  - name: "SendExecutionLog"
+    action: "aws:executeAwsApi"
+    inputs:
+      Service: "sns"
+      Api: "Publish"
+      TopicArn: "${aws_sns_topic.default.arn}"
+      Subject: "Deregister instance from CloudMap on termination ${local.project}-{{ InstanceId }}"
+      Message: "Deregister {{ InstanceId }} from CloudMap on termination {{ automation:EXECUTION_ID }} completed at {{ global:DATE_TIME }}"
 EOF
 }
