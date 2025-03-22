@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "opensearch_access" {
 # # ---------------------------------------------------------------------------------------------------------------------#
 resource "aws_opensearch_domain" "this" {
   depends_on = [null_resource.es]
-  domain_name           = "${local.project}-opensearch"
+  domain_name  = "${local.project}-opensearch"
   engine_version = var.opensearch["engine_version"]
   cluster_config {
     instance_type  = var.opensearch["instance_type"]
