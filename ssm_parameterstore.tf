@@ -23,7 +23,7 @@ locals {
     AWS_DEFAULT_REGION          = data.aws_region.current.name
     VPC_ID                      = aws_vpc.this.id
     CIDR                        = aws_vpc.this.cidr_block
-    SUBNET_ID                   = values(aws_subnet.this).0.id
+    SUBNET_ID                   = join(",", random_shuffle.subnets.result)
     EC2_SECURITY_GROUP          = aws_security_group.ec2.id
     SOURCE_AMI                  = data.aws_ami.distro.id
     EFS_SYSTEM_ID               = aws_efs_file_system.this.id
@@ -32,10 +32,6 @@ locals {
     SNS_TOPIC_ARN               = aws_sns_topic.default.arn
     FRONTEND_CLOUDMAP_SERVICE_ID = aws_service_discovery_service.this["frontend"].id
     VARNISH_CLOUDMAP_SERVICE_ID = aws_service_discovery_service.this["varnish"].id
-    MARIADB_CLOUDMAP_SERVICE_ID = aws_service_discovery_service.this["mariadb"].id
-    OPENSEARCH_CLOUDMAP_SERVICE_ID = aws_service_discovery_service.this["opensearch"].id
-    REDIS_CLOUDMAP_SERVICE_ID   = aws_service_discovery_service.this["redis"].id
-    RABBITMQ_CLOUDMAP_SERVICE_ID = aws_service_discovery_service.this["rabbitmq"].id
     RABBITMQ_ENDPOINT           = trimsuffix(trimprefix("${aws_mq_broker.this.instances.0.endpoints.0}", "amqps://"), ":5671")
     RABBITMQ_USER               = var.brand
     RABBITMQ_PASSWORD           = random_password.this["rabbitmq"].result
