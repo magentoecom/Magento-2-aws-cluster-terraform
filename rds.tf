@@ -18,9 +18,9 @@ resource "aws_db_subnet_group" "this" {
 # Create RDS parameter groups
 # # ---------------------------------------------------------------------------------------------------------------------#		
 resource "aws_db_parameter_group" "this" {
-  name              = "${local.project}-parameters"
-  family            = var.rds["family"]
-  description       = "Parameter group for ${local.project} database"
+  name = "${local.project}-parameters"
+  family = var.rds["family"]
+  description  = "Parameter group for ${local.project} database"
    dynamic "parameter" {
     for_each = var.rds_parameters
     content {
