@@ -8,6 +8,11 @@ variable "brand" {
   type        = string
 }
 
+variable "codename" {
+  description = "Project codename"
+  type        = string
+}
+
 variable "domain" {
   description = "Shop domain name"
   type        = string
@@ -20,7 +25,8 @@ variable "admin_email" {
 
 locals {
    # Create global project name to be assigned to all resources
-   project = lower("${var.brand}-${random_string.this["project"].result}")
+   project = lower("${var.brand}-${var.codename}-${substr(lower(terraform.workspace), 0, 1)}")
+   # Get env from workspace
    environment = lower(terraform.workspace)
 }
 
@@ -29,13 +35,7 @@ locals {
     Managed      = "terraform"
     Brand        = var.brand
     Environment  = local.environment
-    Dns          = "${var.brand}.internal"
-  }
-}
-
-locals {
-  ec2_setup = {
-    Setup = "s3_system_setup"
+    Project      = local.project
   }
 }
 
@@ -53,9 +53,7 @@ variable "string" {
    description = "Generate random string"
    default     = [
       "admin_path",
-      "mysql_path",
       "health_check",
-      "project",
       "opensearch"
    ]
 }
@@ -67,6 +65,7 @@ variable "vpc" {
     enable_dns_hostnames = true
     instance_tenancy     = "default"
     cidr_block           = "172.35.0.0/16"
+    availability_zones_qty = "2"
   }
 }
 
@@ -91,7 +90,7 @@ variable "ec2" {
 variable "opensearch" {
   description      = "Map OpenSearch configuration values"
   default  = {
-    engine_version         = "OpenSearch_2.13"
+    engine_version         = "OpenSearch_2.17"
     instance_type          = "m6g.large.search"
     instance_count         = "1"
     ebs_enabled            = true
@@ -103,7 +102,7 @@ variable "opensearch" {
 
 locals {
   db_name_prefix = replace(local.project, "-", "_")
-  db_name        = "${local.db_name_prefix}_${local.environment}"
+  db_name        = "${local.db_name_prefix}"
 }
 
 variable "rds" {
@@ -114,7 +113,7 @@ variable "rds" {
     storage_type           = "gp3"
     storage_encrypted      = true
     engine                 = "mariadb"
-    engine_version         = "10.11.6"
+    engine_version         = "10.11.21"
     family                 = "mariadb10.11"
     instance_class         = "db.m7g.large"
     skip_final_snapshot    = true
@@ -209,7 +208,7 @@ variable "rds_parameters" {
 variable "rabbitmq" {
   description      = "Map RabbitMQ configuration values"
   default  = {
-    engine_version         = "3.12.13"
+    engine_version         = "3.13"
     deployment_mode        = "SINGLE_INSTANCE" ## "CLUSTER_MULTI_AZ"
     host_instance_type     = "mq.m5.large"
   }
