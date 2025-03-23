@@ -10,16 +10,17 @@ resource "aws_lb" "this" {
   name               = "${local.project}-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = [for subnet in aws_subnet.this : subnet.id]
+  enable_deletion_protection = var.alb["enable_deletion_protection"]
   drop_invalid_header_fields = true
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = values(aws_subnet.this).*.id
   access_logs {
     bucket  = aws_s3_bucket.this["system"].bucket
     prefix  = "ALB"
     enabled = true
   }
   tags = {
-    Name = "${local.project}-${each.key}-alb"
+    Name = "${local.project}-alb"
   }
 }
 # # ---------------------------------------------------------------------------------------------------------------------#
