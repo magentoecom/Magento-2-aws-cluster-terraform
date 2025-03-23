@@ -9,7 +9,7 @@
 resource "aws_db_subnet_group" "this" {
   name       = "${local.project}-db-subnet"
   description = "RDS Subnet for ${replace(local.project,"-"," ")}"
-  subnet_ids = values(aws_subnet.this).*.id
+  subnet_ids = random_shuffle.subnets.result
   tags = {
     Name = "${local.project}-db-subnet"
   }
