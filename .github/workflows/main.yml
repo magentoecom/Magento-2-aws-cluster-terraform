@@ -8,7 +8,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main_v5
+          ref: ecs_v5
       - name: Replace var.name
         run: |
           find . -type f -exec sed -i 's/var\.app\[\("\)\([a-z_]*\)\("\)\]/var.\2/g' {} \;
@@ -18,4 +18,4 @@ jobs:
           git config --local user.email "admin@magenx.com"
           git add .
           git commit -m "Replaced var.name"
-          git push origin main_v5
+          git push origin ecs_v5
