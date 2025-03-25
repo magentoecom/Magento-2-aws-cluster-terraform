@@ -1,0 +1,25 @@
+on:
+  push:
+    branches:
+      - main_v5
+      
+  workflow_dispatch:
+  
+jobs:
+  replace-vars:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main_v5
+      - name: Replace var.app["name"] with var.name
+        run: |
+          find . -type f -exec sed -i 's/var\.app\[\("\)\([a-z_]*\)\("\)\]/var.\2/g' {} \;
+      - name: Commit changes
+        run: |
+          git config --local user.name "magenx"
+          git config --local user.email "admin@magenx.com"
+          git add .
+          git commit -m "Replaced var.app['name'] with var.name"
+          git push origin main_v5
