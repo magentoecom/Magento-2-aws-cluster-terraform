@@ -1,8 +1,5 @@
 name: Replace vars
 on: workflow_dispatch
-permissions:
-  contents: write
-  actions: write
   
 jobs:
   replace-vars:
@@ -12,7 +9,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main_v5
-      - name: Replace var.app["name"] with var.name
+      - name: Replace var.name
         run: |
           find . -type f -exec sed -i 's/var\.app\[\("\)\([a-z_]*\)\("\)\]/var.\2/g' {} \;
       - name: Commit changes
@@ -20,5 +17,5 @@ jobs:
           git config --local user.name "magenx"
           git config --local user.email "admin@magenx.com"
           git add .
-          git commit -m "Replaced var.app['name'] with var.name"
+          git commit -m "Replaced var.name"
           git push origin main_v5
