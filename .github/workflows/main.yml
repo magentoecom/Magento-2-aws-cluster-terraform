@@ -2,6 +2,7 @@ name: Replace vars
 on: workflow_dispatch
 permissions:
   contents: write
+  actions: write
   
 jobs:
   replace-vars:
