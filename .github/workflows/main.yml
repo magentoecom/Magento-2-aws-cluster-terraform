@@ -1,9 +1,6 @@
-on:
-  push:
-    branches:
-      - main_v5
+on: workflow_dispatch
       
-  workflow_dispatch:
+permissions: write-all
   
 jobs:
   replace-vars:
