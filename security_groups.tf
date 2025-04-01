@@ -4,70 +4,37 @@
 ////////////////////////////////////////////////////////[ SECURITY GROUPS ]///////////////////////////////////////////////
 
 # # ---------------------------------------------------------------------------------------------------------------------#
-# Create security group and rules for External ALB
+# Create security group and rules for ALB
 # # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_security_group" "external_alb" {
-  name        = "${local.project}-external-alb-sg"
+resource "aws_security_group" "alb" {
+  name        = "${local.project}-alb-sg"
   description = "Security group rules for ${local.project} ALB"
   vpc_id      = aws_vpc.this.id
-
-  ingress {
-      description      = "Allow all inbound traffic on the load balancer https listener port"
-      from_port        = 443
-      to_port          = 443
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"]
-    }
-  
-  ingress {
-      description      = "Allow all inbound traffic on the load balancer http listener port"
-      from_port        = 80
-      to_port          = 80
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"] 
-    }
-
-  egress {
-      description      = "Allow outbound traffic to instances on the load balancer listener port"
-      from_port        = 80
-      to_port          = 80
-      protocol         = "tcp"
-      security_groups  = [aws_security_group.ec2.id]
-    }
-
   tags = {
-    Name = "${local.project}-external-alb-sg"
+    Name = "${local.project}-alb-sg"
   }
 }
 
-# # ---------------------------------------------------------------------------------------------------------------------#
-# Create security group and rules for Internal ALB
-# # ---------------------------------------------------------------------------------------------------------------------#
-resource "aws_security_group" "internal_alb" {
-  name        = "${local.project}-internal-alb-sg"
-  description = "Security group rules for ${local.project} ALB"
-  vpc_id      = aws_vpc.this.id
-  
-  ingress {
-      description      = "Allow all inbound traffic on the load balancer http listener port"
-      from_port        = 80
-      to_port          = 80
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"] 
-    }
-
-  egress {
-      description      = "Allow outbound traffic to instances on the load balancer listener port"
-      from_port        = 80
-      to_port          = 80
-      protocol         = "tcp"
-      security_groups  = [aws_security_group.ec2.id]
-    }
-
+resource "aws_vpc_security_group_ingress_rule" "alb" {
+  description       = "Security group rules for ALB ingress"
+  security_group_id = aws_security_group.alb.id
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
   tags = {
-    Name = "${local.project}-internal-alb-sg"
+    Name = "${local.project}-alb-ingress-sg"
   }
 }
+
+resource "aws_vpc_security_group_egress_rule" "alb" {
+  description       = "Security group rules for ALB egress"
+  security_group_id = aws_security_group.alb.id
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
+  tags = {
+    Name = "${local.project}-alb-egress-sg"
+  }
+}
+
 
 # # ---------------------------------------------------------------------------------------------------------------------#
 # Create security group and rules for EC2
