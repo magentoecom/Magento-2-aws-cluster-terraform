@@ -192,7 +192,7 @@ data "aws_iam_policy_document" "system" {
   }
 
   statement {
-    sid    = "AllowCodebuildS3Access"
+    sid    = "AllowCodeDeployS3Access"
     effect = "Allow"
     actions = [
       "s3:PutObject",
@@ -204,9 +204,7 @@ data "aws_iam_policy_document" "system" {
     principals {
       type        = "AWS"
       identifiers = [
-        aws_iam_role.codebuild.arn,
-        aws_iam_role.codepipeline.arn,
-        aws_iam_role.config.arn
+        aws_iam_role.codedeploy.arn
       ]
     }
   }
@@ -261,8 +259,6 @@ data "aws_iam_policy_document" "backup" {
     principals {
       type        = "AWS"
       identifiers = [
-        aws_iam_role.codebuild.arn,
-        aws_iam_role.codepipeline.arn,
         aws_iam_role.codedeploy.arn
       ]
     }
