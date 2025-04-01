@@ -55,8 +55,7 @@ locals {
     MARIADB_ENDPOINT            = aws_db_instance.this.endpoint
     MARIADB_NAME                = aws_db_instance.this.identifier
     MARIADB_USER                = aws_db_instance.this.username
-    MARIADB_PASSWORD            = random_password.this["mariadb"].result
-    MARIADB_ROOT_PASSWORD       = random_password.this["mariadb_root"].result
+    MARIADB_PASSWORD            = random_password.this["database"].result
     ADMIN_PATH                  = "admin_${random_string.this["admin_path"].result}"
     DOMAIN                      = var.domain
     BRAND                       = var.brand
