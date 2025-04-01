@@ -17,7 +17,7 @@ resource "aws_service_discovery_private_dns_namespace" "this" {
 
 resource "aws_service_discovery_service" "this" {
   for_each = {
-    for entry in setproduct(keys(var.ec2), slice(keys(data.aws_availability_zone.all), 0, 2)) :
+    for entry in setproduct(keys(var.ec2), keys(data.aws_availability_zone.available)) :
       "${entry[0]}-${entry[1]}" => { 
         service = entry[0], 
         az      = entry[1] 
