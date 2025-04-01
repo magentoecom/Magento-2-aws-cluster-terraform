@@ -139,23 +139,13 @@ resource "aws_security_group_rule" "ec2_http_in_ec2" {
     security_group_id = aws_security_group.ec2.id
     }
 
-resource "aws_security_group_rule" "ec2_http_external" {
+resource "aws_security_group_rule" "ec2_http" {
     type        = "ingress"
     description = "Allow all inbound traffic from the load balancer on http port"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    source_security_group_id = aws_security_group.external_alb.id
-    security_group_id = aws_security_group.ec2.id
-    }
-
-resource "aws_security_group_rule" "ec2_http_internal" {
-    type        = "ingress"
-    description = "Allow all inbound traffic from the load balancer on http port"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    source_security_group_id = aws_security_group.internal_alb.id
+    source_security_group_id = aws_security_group.alb.id
     security_group_id = aws_security_group.ec2.id
     }
 
