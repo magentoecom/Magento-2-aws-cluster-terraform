@@ -272,6 +272,7 @@ variable "alb" {
   default     = {
     rps_threshold      = "5000"
     error_threshold    = "25"
+    enable_deletion_protection = false
     }
 }
 
