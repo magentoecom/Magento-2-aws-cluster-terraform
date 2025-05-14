@@ -1,0 +1,28 @@
+name: Create Template Branches
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-orphan-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TOKEN }}
+
+      - name: Set Git user identity
+        run: |
+          git config --global user.name "Magenx Cloud"
+          git config --global user.email "admin@magenx.com"
+      - name: Create template branches
+        run: |
+          git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/magenx-cloud/magenx.git"
+          branches=("module")
+          for branch in "${branches[@]}"; do
+            git checkout --orphan "${branch}"
+            git rm -rf . || true
+            git commit --allow-empty -m "${branch}"
+            git push origin "${branch}"
+          done
