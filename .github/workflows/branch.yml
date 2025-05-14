@@ -16,7 +16,7 @@ jobs:
           git config --global user.email "admin@magenx.com"
       - name: Create template branches
         run: |
-          git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/magenx-cloud/magenx.git"
+          git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/magenx/Magento-2-aws-cluster-terraform.git"
           branches=("module")
           for branch in "${branches[@]}"; do
             git checkout --orphan "${branch}"
